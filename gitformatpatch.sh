@@ -73,8 +73,7 @@ do
 		MINORSTR=".$MINOR"
 	   fi;;
 	t) TYPE="$OPTARG PATCH";;
-	?) echo "Invalid argument $opt"
-	   usage;;
+	?) fatal "Invalid argument: $opt";;
 	esac
 done
 shift $(($OPTIND - 1))
@@ -97,19 +96,20 @@ if [ $NUMBER -ge 2 ]; then
 fi
 GFPFLAGS="$GFPFLAGS -$NUMBER"
 
+require_msgid=yes
+if [ $MAJOR -eq 1 -a $MINOR -eq 0 ]; then
+	require_msgid=no
+fi
+if [ $MAJOR -eq 0 -a $MINOR -eq 1 ]; then
+	require_msgid=no
+fi
 if [ "x$1" = "x" ]; then
-	if [ $MAJOR -eq 1 -a $MINOR -eq 0 ]; then
-		fatal "Message-Id is not specified for non v1 series."
-	fi
-	if [ $MAJOR -eq 0 -a $MINOR -eq 1 ]; then
-		fatal "Message-Id is not specified for non v0.1 series."
+	if [ "x$require_msgid" = "xyes" ]; then
+		fatal "Message-Id is not specified for non v1/v0.1 series: ${MAJOR}.${MINOR}."
 	fi
 elif [ "x$1" != "xnone" ]; then
-	if [ $MAJOR -eq 1 -a $MINOR -eq 0 ]; then
-		fatal "Message-Id is specified without specifying >1 version (-r/-m): $1."
-	fi
-	if [ $MAJOR -eq 0 -a $MINOR -eq 1 ]; then
-		fatal "Message-Id $1 is specified without specifying >0.1 version (-r/-m): $1."
+	if [ "x$require_msgid" = "xno" ]; then
+		fatal "Message-Id is specified for v1/v0.1 series: $1."
 	fi
 	msgid=`cat $MSGIDS | grep $1 | cut -f2`
 	if [ "x$msgid" = "x" ]; then
@@ -129,7 +129,7 @@ if [ "x$DRYRUN" != "xyes" ]; then
 	echo "Generating $NUMBER patches:"
 	for number in $patches; do
 		patch=${PREFIX}`printf %0${WIDTH}d $number`${SUFFIX}
-		echo $patch
+		echo " $patch"
 		mv -f $number $patch
 	done
 else
