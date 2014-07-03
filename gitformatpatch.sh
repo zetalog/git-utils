@@ -10,42 +10,51 @@ SCRIPT=`(cd \`dirname $0\`; pwd)`
 MSGIDS=$HOME/msgids
 
 GFPFLAGS="-s --thread=shallow --numbered-files"
+
+# Option controllable variables
+COVER=false
 SUFFIX=.patch
 PREFIX=
 NUMBER=1
-COVER=false
 MAJOR=1
 MINOR=0
 
+# Subject prefix formatting
 PATCHSTR=PATCH
 MAJORSTR=
 MINORSTR=
 
 usage()
 {
-	echo "Usage: `basename $0`"
-	echo " [-n number] [-c] [-o]"
+	echo "Usage: `basename $0` [-d]"
+	echo " [-n number] [-c]"
 	echo " [-p prefix] [-s suffix]"
 	echo " [-r major] [-m minor] [-t type]"
-	echo " [-d] [Message-Id]"
+	echo " [-o]"
+	echo " [Message-Id]"
 	echo "Where:"
 	echo "  -d: dry run"
-	echo "  -c: generate cover letter"
-	echo "  -n: number of patches to generate from the HEAD"
-	echo "  -o: generate outgoing patch with rename/copy detections"
+	echo "  -n: specify number of patches to generate from HEAD"
+	echo "      default is 1"
+	echo "  -c: specify cover letter generation"
 	echo "  -p: specify prefix of patch file format"
-	echo "  -s: specify suffix of patch file format, default is .patch"
-	echo "  -r: specify major of patch subject format, default is 1"
-	echo "  -m: specify minor of patch subject format, default is 0"
+	echo "  -s: specify suffix of patch file format"
+	echo "      default is .patch"
+	echo "  -r: specify major of patch subject format"
+	echo "      default is 1"
+	echo "  -m: specify minor of patch subject format"
+	echo "      default is 0"
 	echo "  -t: specify type of patch subject format"
+	echo "  -o: generate outgoing patch with rename/copy detections"
 	echo "  Message-Id can be:"
-	echo "    none: force starting a new thread, this is default for v1, v0.1"
-	echo "    other: Message-Id name in $MSGIDS file"
-	echo "Patch file format: [<prefix>]index<suffix>"
-	echo "                   index is a width 1-4 integer from 0 to number:"
-	echo "                   0 is used for the cover letter."
-	echo "                   1-number are used for the patches."
-	echo "Patch subject format: [<type> ]PATCH[ v<major>[.<minor>]]"
+	echo "      none: force starting a new thread"
+	echo "      other: Message-Id name in $MSGIDS file"
+	echo "      default none for v1/0.1"
+	echo "  Patch file format: [<prefix>]index<suffix>"
+	echo "      index is a width 1-4 integer from 0 to number:"
+	echo "      0: used for the cover letter"
+	echo "      1-number: used for the patches"
+	echo "  Patch subject format: [<type> ]PATCH[ v<major>[.<minor>]]"
 	exit 0
 }
 
@@ -76,27 +85,27 @@ do
 	case $opt in
 	c) COVER=true;;
 	d) DRYRUN="yes";;
-	n) isnumber $OPTARG yes || fatal "'number' must be an integer (>0): $OPTARG"
+	n) isnumber $OPTARG yes || fatal "Invalid number: $OPTARG isn't an integer >0."
 	   NUMBER=$OPTARG;;
 	o) GFPFLAGS="$GFPFLAGS -M -C";;
 	p) PREFIX=$OPTARG;;
 	s) SUFFIX=$OPTARG;;
-	r) isnumber $OPTARG || fatal "'major' must be an integer (>=0): $OPTARG"
+	r) isnumber $OPTARG || fatal "Invalid major: $OPTARG isn't an integer >=0."
 	   MAJOR=$OPTARG;;
-	m) isnumber $OPTARG || fatal "'minor' must be an integer (>=0): $OPTARG"
+	m) isnumber $OPTARG || fatal "Invalid minor: $OPTARG isn't an integer >=0."
 	   MINOR=$OPTARG
 	   if [ $MINOR -ne 0 ]; then
 		MINORSTR=".$MINOR"
 	   fi;;
 	t) PATCHSTR="$OPTARG PATCH";;
-	?) fatal "Invalid argument: $opt";;
+	?) fatal "Invalid option: unknown option $OPTIND.";;
 	esac
 done
 shift $(($OPTIND - 1))
 
 # Sanity checks
 if [ $MAJOR -eq 0 -a $MINOR -eq 0 ]; then
-	fatal "Patch version is not allowed: v${MAJOR}.${MINOR}."
+	fatal "Invalid major/minor: v${MAJOR}.${MINOR} is not allowed."
 fi
 require_msgid=yes
 if [ $MAJOR -eq 1 -a $MINOR -eq 0 ]; then
@@ -107,26 +116,18 @@ if [ $MAJOR -eq 0 -a $MINOR -eq 1 ]; then
 fi
 if [ "x$1" = "x" ]; then
 	if [ "x$require_msgid" = "xyes" ]; then
-		fatal "Message-Id should be specified for non v1/v0.1 series: v${MAJOR}.${MINOR}."
+		fatal "Invalid Message-Id: thread isn't specified for v${MAJOR}.${MINOR}."
 	fi
 elif [ "x$1" != "xnone" ]; then
 	if [ "x$require_msgid" = "xno" ]; then
-		fatal "Message-Id shouldn't be specified for v${MAJOR}.${MINOR} series: $1."
+		fatal "Invalid Message-Id: $1 shouldn't be specified for v${MAJOR}.${MINOR}."
+	fi
+	msgid=`cat $MSGIDS | grep $1 | cut -f2`
+	if [ "x$msgid" = "x" ]; then
+		fatal "Invalid Message-Id: cannot find $1 in $MSGIDS."
 	fi
 #else
 	# No sanity check to allow explicit "none" to start a new thread
-fi
-
-# Determine width of patch file index
-WIDTH=1
-if [ $NUMBER -ge 10 ]; then
-	WIDTH=2
-fi
-if [ $NUMBER -ge 100 ]; then
-	WIDTH=3
-fi
-if [ $NUMBER -ge 1000 ]; then
-	WIDTH=3
 fi
 
 # Prepare -x argument of git-format-patch
@@ -142,10 +143,6 @@ fi
 
 # Prepare --in-reply-to argument of git-format-patch
 if [ "x$1" != "x" -a "x$1" != "xnone" ]; then
-	msgid=`cat $MSGIDS | grep $1 | cut -f2`
-	if [ "x$msgid" = "x" ]; then
-		fatal "Cannot find Message-Id in $MSGIDS: $1."
-	fi
 	echo "Found Message-Id: <$msgid>."
 	GFPFLAGS="$GFPFLAGS --in-reply-to=$msgid"
 fi
@@ -158,9 +155,22 @@ subject="${PATCHSTR}${MAJORSTR}${MINORSTR}"
 GFPFLAGS="$GFPFLAGS --subject-prefix='$subject'"
 
 if [ "x$DRYRUN" != "xyes" ]; then
+	# Execute git-format-patch
 	indexes=`eval git format-patch $GFPFLAGS`
+
+	# Rename patch files
 	echo "Generating $NUMBER patches:"
 	echo " file: subject"
+	WIDTH=1
+	if [ $NUMBER -ge 10 ]; then
+		WIDTH=2
+	fi
+	if [ $NUMBER -ge 100 ]; then
+		WIDTH=3
+	fi
+	if [ $NUMBER -ge 1000 ]; then
+		WIDTH=3
+	fi
 	for index in $indexes; do
 		file=${PREFIX}`printf %0${WIDTH}d $index`${SUFFIX}
 		echo " $file: $subject"
