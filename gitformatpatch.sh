@@ -61,8 +61,9 @@ usage()
 isnumber()
 {
 	nozero=$2
+	calcnum=`echo $1 | bc 2>/dev/null`
 
-	if [[ $1 =~ [^0-9] ]]; then
+	if [ "x$1" != "x$calcnum" ]; then
 		return 1
 	fi
 	if [ "x$nozero" = "xyes" -a $1 -le 0 ]; then
