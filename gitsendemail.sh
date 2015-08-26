@@ -20,6 +20,7 @@ usage()
 	echo ""
 	echo "  Internal recipients:"
 	echo "   patchwork:		Ying Huang <ying.huang@intel.com>"
+	echo "   prc-acpi:		Intel PRC Linux ACPI team"
 	echo "   acpi-review:		Intel Linux ACPI team"
 	echo "   acpica-review:	Intel Linux ACPICA team"
 	echo "   intel-acpi:		Intel Linux ACPI <acpi@linux.intel.com>"
@@ -67,18 +68,22 @@ do
 done
 shift $(($OPTIND - 1))
 
+GSEFLAGS="$GSEFLAGS \
+--confirm=always \
+"
+
 if [ "x$1" = "xlv.zheng" ]; then
 	echo "Sending email to Lv \"ZETALOG\" Zheng"
 	GSEFLAGS="$GSEFLAGS \
 --suppress-cc=all \
 --to=\"Lv Zheng <lv.zheng@intel.com>\" \
---cc=\"Ying Huang <ying.huang@intel.com>\" \
 "
 elif [ "x$1" = "xzetalog" ]; then
 	echo "Sending email to Lv \"ZETALOG\" Zheng"
 	GSEFLAGS="$GSEFLAGS \
 --suppress-cc=all \
 --to=\"Lv Zheng <zetalog@gmail.com>\" \
+--to=\"Ruiyi Zhang <ruiyi@qti.qualcomm.com>\" \
 "
 else
 	GSELIST="none"
@@ -89,13 +94,25 @@ else
 --cc=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
 --to=\"David E. Box <david.e.box@intel.com>\" \
 --cc=\"Ying Huang <ying.huang@intel.com>\" \
+--cc=\"Julie Du <julie.du@intel.com>\" \
 "
 		echo "Sending email to Linux ACPICA team"
+	elif [ "x$1" = "xprc-acpi" ]; then
+		GSEFLAGS="$GSEFLAGS \
+--cc=\"Ying Huang <ying.huang@intel.com>\" \
+--cc=\"Julie Du <julie.du@intel.com>\" \
+--to=\"Rui Zhang <rui.zhang@intel.com>\" \
+--to=\"Aaron Lu <aaron.lu@intel.com>\" \
+--to=\"Yu Chen <yu.c.chen@intel.com>\" \
+"
+		echo "Sending email to PRC Linux ACPI team"
 	elif [ "x$1" = "xacpi-review" ]; then
 		GSEFLAGS="$GSEFLAGS \
+--cc=\"Ying Huang <ying.huang@intel.com>\" \
+--cc=\"Julie Du <julie.du@intel.com>\" \
 --to=\"Rui Zhang <rui.zhang@intel.com>\" \
---to=\"Tianyu Lan <tianyu.lan@intel.com>\" \
 --to=\"Aaron Lu <aaron.lu@intel.com>\" \
+--to=\"Yu Chen <yu.c.chen@intel.com>\" \
 --to=\"Len Brown <len.brown@intel.com>\" \
 --to=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
 --to=\"Robert Moore <robert.moore@intel.com>\" \
@@ -116,6 +133,8 @@ else
 --to=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
 --to=\"Robert Moore <robert.moore@intel.com>\" \
 --to=\"Len Brown <len.brown@intel.com>\" \
+--to=\"Lv Zheng <lv.zheng@intel.com>\" \
+--to=\"David E. Box<david.e.box@intel.com>\" \
 --cc=\"linux-acpi@vger.kernel.org\" \
 "
 		OUTGOING="yes"
@@ -124,12 +143,14 @@ else
 		GSELIST="acpica-devel"
 		GSEFLAGS="$GSEFLAGS \
 --to=\"Robert Moore <robert.moore@intel.com>\" \
+--to=\"Lv Zheng <lv.zheng@intel.com>\" \
+--to=\"David E. Box<david.e.box@intel.com>\" \
 --cc=\"devel@acpica.org\" \
 "
 		OUTGOING="yes"
 		echo "Sending email to ACPICA mailing list"
 	elif [ "x$1" = "xacpica-both" ]; then
-		GSELIST="acpica-devel"
+		GSELIST="acpica-both"
 		GSEFLAGS="$GSEFLAGS \
 --to=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
 --to=\"Len Brown <len.brown@intel.com>\" \
@@ -148,6 +169,7 @@ else
 --to=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
 --to=\"Robert Moore <robert.moore@intel.com>\" \
 --to=\"acpi@linux.intel.com\" \
+--to=\"linux-power-mgmt@linux.intel.com\" \
 "
 		echo "Sending email to Intel ACPI community"
 	elif [ "x$1" = "xpatchwork" ]; then
@@ -162,9 +184,10 @@ else
 --to=\"Robert Moore <robert.moore@intel.com>\" \
 --to=\"David E. Box<david.e.box@intel.com>\" \
 --cc=\"Ying Huang <ying.huang@intel.com>\" \
+--cc=\"Julie Du <julie.du@intel.com>\" \
 --cc=\"Rui Zhang <rui.zhang@intel.com>\" \
---cc=\"Tianyu Lan <tianyu.lan@intel.com>\" \
 --cc=\"Aaron Lu <aaron.lu@intel.com>\" \
+--to=\"Yu Chen <yu.c.chen@intel.com>\" \
 "
 		echo "Sending email to ACPICA divergences related"
 	else
@@ -173,9 +196,10 @@ else
 
 	# Cc Ying Huang for internal review
 	if [ "x$GSELIST" = "xnone" ]; then
-		echo "Sending email to Ying Huang"
+		echo "Sending email to patchwork and manager"
 		GSEFLAGS="$GSEFLAGS \
---cc=\"Ying Huang <ying.huang@intel.com>\" \
+--to=\"Ying Huang <ying.huang@intel.com>\" \
+--cc=\"Julie Du <julie.du@intel.com>\" \
 "
 	fi
 fi
