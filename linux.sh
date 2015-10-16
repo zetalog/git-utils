@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# Copyright (C) 2014 ZETALOG PERSONAL
+# Copyright (C) 2014-2015 ZETALOG PERSONAL
 # Author: Lv Zheng <zetalog@gmail.com>
 #
-# Typical build configuration file contents:
+# Typical build configuration file contents (basic kconfig configs):
 # ######################
 # # LINUX_VER=acpica   #
 # # LINUX_ARCH=x86     #
@@ -11,8 +11,8 @@
 # # LINUX_MACH=z530    #
 # # LINUX_TOOLS=acpi   #
 # ######################
-# It should locate at:
-# $SCRIPT/defconfig/build
+# It should locate at (-b file):
+# $SCRIPT/defconfig/file
 # Then:
 # The kconfig file should locate at:
 # $SCRIPT/defconfig/linux-config-acpica-z530
@@ -23,45 +23,96 @@
 # And, the following kernel tools will be built:
 # acpi
 #
-# Typical special config test file contents:
+# Typical special config test file contents (extra kconfig configs):
 # #################
 # # CONFIG_ACPI=n #
 # #################
-# It should locate at:
-# $SCRIPT/defconfig/test
+# It should locate at (-c file):
+# $SCRIPT/defconfig/file
 # This allows additional build test to be performed by disabling ACPI.
 #
-# Typical special object test file contents:
+# Typical special object test file contents (extra targets):
 # ######################################
 # # arch/x86/pci/mmconfig-shared.o     #
 # # drivers/firmware/iscsi_ibft_find.o #
 # # drivers/sfi/sfi_acpi.o             #
 # ######################################
-# It should locate at:
-# $SCRIPT/defconfig/test
+# It should locate at (-o file):
+# $SCRIPT/defconfig/file
 # This allows additional make targets to be performed.
 
 usage()
 {
-	echo "Usage: `basename $0` [-b build] [-c config] [-o object] [-p thread] [-q patch] [-r rebuild] [-isw] [-ynm] [-dv]"
+	echo "Usage: `basename $0` [-b build] [-c config] [-o object] [-p thread] [-q patch] [-r rebuild] [-isw] [-kdynm] [-ev]"
 	echo "Where:"
-	echo "  -b: specify build configuration file"
-	echo "  -c: specify special config test file"
-	echo "  -o: specify special object test file"
 	echo "  -y: build allyesconfig"
 	echo "  -n: build allnoconfig"
 	echo "  -m: build allmodconfig"
+	echo "  -b: specify basic kconfig configs"
+	echo "  -d: build basic kconfig configs"
+	echo "  -c: specifiy extra kconfig configs"
+	echo "      to build basic+extra kconfig configs"
+	echo "  -o: specify extra targets (usually single object file)"
+	echo "      to perform make on these targets"
+	echo "  -i: prepare disk images"
+	echo "  -k: apply kconfig configs without building kernels"
+	echo ""
 	echo "  -p: specify parallel build threads"
+	echo "  -q: test and sign quilt patch"
 	echo "  -r: enable rebuilding"
 	echo "      no: never enable rebuilding"
 	echo "      yes: always enable rebuilding"
+	echo ""
 	echo "  -s: increase checker level (max 2, C=1, C=2)"
 	echo "  -w: increase warning level (max 3, W=1, W=2, W=3)"
-	echo "  -i: prepare disk images"
-	echo "  -d: dry run"
+	echo ""
+	echo "  -e: no execution (dry run)"
 	echo "  -v: increase verbose level (max 3, V=0, V=1, V=2)"
-	echo "  -q: test and sign quilt patch"
 	exit 0
+}
+
+log_name()
+{
+	if [ "x$QUILTPATCH" = "x" ]; then
+		echo $LINUX_VER-$LINUX_MACH-$LINUX_BLD.log
+	else
+		echo $LINUX_VER-$LINUX_MACH-$LINUX_BLD-$QUILTPATCH.log
+	fi
+}
+
+log_init()
+{
+	LINUX_BLD=$1
+	log=`log_name`
+
+	echo > $log
+}
+
+log()
+{
+	log=`log_name`
+
+	echo $@ | tee -a $log
+}
+
+tlog_name()
+{
+	echo ../$LINUX_VER-$LINUX_MACH-tools.log
+}
+
+tlog_init()
+{
+	tlog=`tlog_name`
+
+	echo $tlog
+	echo > $tlog
+}
+
+tlog()
+{
+	tlog=`tlog_name`
+
+	echo $@ | tee -a $tlog
 }
 
 load_objects()
@@ -73,21 +124,21 @@ load_objects()
 modify_kconfig()
 {
 	if [ "x$1" =  "x--disable" ]; then
-		echo " Disabling $2"
+		log " Disabling $2"
 	else
-		echo " Enabling $2"
+		log " Enabling $2"
 	fi
 	$MODCONFIG $@
 	make oldconfig 1>/dev/null 2>&1
 	cfg=`cat ./.config | grep ^CONFIG_$2=`
 	if [ "x$1" =  "x--disable" ]; then
 		if [ "x$cfg" != "x" ]; then
-			echo "Failed to disable $2, please check dependencies."
+			log "Failed to disable $2, please check dependencies."
 			exit 1
 		fi
 	else
 		if [ "x$cfg" = "x" ]; then
-			echo "Failed to enable $2, please check dependencies."
+			log "Failed to enable $2, please check dependencies."
 			exit 1
 		fi
 	fi
@@ -95,14 +146,14 @@ modify_kconfig()
 
 copy_configs()
 {
-	echo "Copying $LINUX_CFG"
+	log "Copying $LINUX_CFG"
 	if [ "x$DRYRUN" != "xyes" ]; then
 		rm -f $KERNELIMG
 		cp -f $LINUX_CFG $KERNELCFG
 	fi
 	if [ "x$CUSTOM_DSDT" != "x" ]; then
 		if [ -f $CUSTOM_DSDT ]; then
-			echo "Copying $CUSTOM_DSDT"
+			log "Copying $CUSTOM_DSDT"
 			if [ "x$DRYRUN" != "xyes" ]; then
 				cp -f $CUSTOM_DSDT $KERNELDSDT
 				apply_kconfig CONFIG_ACPI_CUSTOM_DSDT_FILE=\"acpi/dsdt.hex\"
@@ -125,17 +176,17 @@ save_status()
 
 build_objects()
 {
-	log=$LINUX_VER-$LINUX_MACH-$1-$QUILTPATCH.log
+	log=`log_name`
 
 	for obj in $SOBJTESTS; do
-		echo "=============================="
-		echo "Testing special object $obj"
-		echo "=============================="
+		log "=============================="
+		log "Testing special object $obj"
+		log "=============================="
 		if [ "x$DRYRUN" != "xyes" ]; then
 			rm -f $obj
-			echo "==========" >>$log
-			echo "Testing $obj" >>$log
-			echo "==========" >>$log
+			log "=========="
+			log "Testing $obj"
+			log "=========="
 			if [ "x$VERBOSE" != "x" ]; then
 				make $MAKEFLAGS ARCH=$BUILD_ARCH $obj 2>&1 | tee -a $log
 			else
@@ -149,14 +200,14 @@ build_objects()
 
 build_tool()
 {
-	tlog=$LINUX_VER-$LINUX_MACH.log
+	tlog=`tlog_name`
 	t=$1
 	d=$2
 
-	if [ "x$1" = "xdefault" ]; then
-		echo "==========" >>$tlog
-		echo "Building tools-$t" >>$tlog
-		echo "==========" >>$tlog
+	tlog "=========="
+	tlog "Building tools-$t"
+	tlog "=========="
+	if [ "x$DRYRUN" != "xyes" ]; then
 		if [ "x$REBUILD" = "xyes" ]; then
 			make ${t}_clean
 		fi
@@ -165,29 +216,24 @@ build_tool()
 		else
 			make DEBUG=$d $MAKEFLAGS $t 2>&1 >>$tlog
 		fi
+	else
+		echo make DEBUG=$d $MAKEFLAGS $t 2>&1
+	fi
 
-		echo "==========" >>$tlog
-		echo "Installing tools-$t to $ROOTFS" >>$tlog
-		echo "==========" >>$tlog
-		if [ "x$VERBOSE" != "x" ]; then
-			make ${t}_uninstall DESTDIR=$ROOTFS 2>&1 | tee -a $tlog
-			make ${t}_install DESTDIR=$ROOTFS 2>&1 | tee -a $tlog
-		else
-			make ${t}_uninstall DESTDIR=$ROOTFS >>$tlog
-			make ${t}_install DESTDIR=$ROOTFS >>$tlog
+	tlog "=========="
+	tlog "Installing tools-$t to $ROOTFS"
+	tlog "=========="
+	if [ "x$DRYRUN" != "xyes" ]; then
+		if [ "x$NOKERNELBUILD" != "xyes" ]; then
+			if [ "x$VERBOSE" != "x" ]; then
+				make ${t}_uninstall DESTDIR=$ROOTFS 2>&1 | tee -a $tlog
+				make ${t}_install DESTDIR=$ROOTFS 2>&1 | tee -a $tlog
+			else
+				make ${t}_uninstall DESTDIR=$ROOTFS >>$tlog
+				make ${t}_install DESTDIR=$ROOTFS >>$tlog
+			fi
 		fi
 	else
-		echo "=========="
-		echo "Building tools-$t"
-		echo "=========="
-		if [ "x$REBUILD" = "xyes" ]; then
-			echo make ${t}_clean
-		fi
-		echo make DEBUG=$d $MAKEFLAGS $t
-
-		echo "=========="
-		echo "Installing tools-$t to $ROOTFS"
-		echo "=========="
 		echo make ${t}_uninstall DESTDIR=$ROOTFS
 		echo make ${t}_install DESTDIR=$ROOTFS
 	fi
@@ -195,61 +241,65 @@ build_tool()
 
 build_kernel()
 {
-	tlog=$LINUX_VER-$LINUX_MACH.log
-	log=$LINUX_VER-$LINUX_MACH-$1-$QUILTPATCH.log
+	log=`log_name`
 
 	save_status $1
 
-	echo > $tlog
 	if [ "x$1" = "xdefault" ]; then
 	(
 		cd tools
+		tlog_init
 		for t in $LINUX_TOOLS; do
 			build_tool $t false
 			build_tool $t true
 		done
+		tlog_exit
 	)
 	fi
 
 	if [ "x$DRYRUN" != "xyes" ]; then
-		echo "==========" >>$tlog
-		echo "Building kernel" >>$tlog
-		echo "==========" >>$tlog
+		log "=========="
+		log "Building kernel"
+		log "=========="
 		make ARCH=$BUILD_ARCH oldconfig
 		apply_kconfig CONFIG_STAGING=n
-		if [ "x$REBUILD" = "xyes" ]; then
-			make ARCH=$BUILD_ARCH clean
-		fi
-		if [ "x$VERBOSE" != "x" ]; then
-			make $MAKEFLAGS ARCH=$BUILD_ARCH 2>&1 | tee -a $tlog
-		else
-			make $MAKEFLAGS ARCH=$BUILD_ARCH 2>&1 >>$tlog
+
+		if [ "x$NOKERNELBUILD" != "xyes" ]; then
+			if [ "x$REBUILD" = "xyes" ]; then
+				make ARCH=$BUILD_ARCH clean
+			fi
+			if [ "x$VERBOSE" != "x" ]; then
+				make $MAKEFLAGS ARCH=$BUILD_ARCH 2>&1 | tee -a $log
+			else
+				make $MAKEFLAGS ARCH=$BUILD_ARCH 2>&1 >>$log
+			fi
 		fi
 
-		echo "==========" >>$tlog
-		echo "Installing kernel to $ROOTFS" >>$tlog
-		echo "==========" >>$tlog
-		if [ "x$VERBOSE" != "x" ]; then
-			make ARCH=$BUILD_ARCH INSTALL_MOD_PATH=$ROOTFS modules_install 2>&1 | tee -a $tlog
-			make ARCH=$BUILD_ARCH INSTALL_PATH=$ROOTFS install 2>&1 | tee -a $tlog
-		else
-			make ARCH=$BUILD_ARCH INSTALL_MOD_PATH=$ROOTFS modules_install 2>&1 >>$tlog
-			make ARCH=$BUILD_ARCH INSTALL_PATH=$ROOTFS install 2>&1 >>$tlog
+		log "=========="
+		log "Installing kernel to $ROOTFS"
+		log "=========="
+		if [ "x$NOKERNELBUILD" != "xyes" ]; then
+			if [ "x$VERBOSE" != "x" ]; then
+				make ARCH=$BUILD_ARCH INSTALL_MOD_PATH=$ROOTFS modules_install 2>&1 | tee -a $log
+				make ARCH=$BUILD_ARCH INSTALL_PATH=$ROOTFS install 2>&1 | tee -a $log
+			else
+				make ARCH=$BUILD_ARCH INSTALL_MOD_PATH=$ROOTFS modules_install 2>&1 >>$log
+				make ARCH=$BUILD_ARCH INSTALL_PATH=$ROOTFS install 2>&1 >>$log
+			fi
 		fi
 
-		mv $tlog $log
 		if [ -f $KERNELIMG ]; then
-			echo "Building linux-$LINUX_VER-$LINUX_MACH success."
+			log "Building linux-$LINUX_VER-$LINUX_MACH success."
 		else
 			BUILDFAIL=yes
-			echo "Building linux-$LINUX_VER-$LINUX_MACH failure."
+			log "Building linux-$LINUX_VER-$LINUX_MACH failure."
 		fi
 	else
 		echo "=========="
 		echo "Building kernel"
 		echo "=========="
 		echo make ARCH=$BUILD_ARCH oldconfig
-		echo apply_kconfig CONFIG_STAGING=n
+		echo CONFIG_STAGING=n
 		if [ "x$REBUILD" = "xyes" ]; then
 			echo make ARCH=$BUILD_ARCH clean
 		fi
@@ -323,7 +373,7 @@ build_initrd()
 		cp -p $LINUX_SRC/usr/gen_init_cpio $INITRD/usr
 		cd $INITRD
 		sudo sh gen_initramfs_list.sh -o $FLASH/boot/initrd.img-$LINUX_VER-$LINUX_MACH $ROOTFS
-		echo "$FLASH/boot/initrd.img-$LINUX_VER-$LINUX_MACH ready."
+		log "$FLASH/boot/initrd.img-$LINUX_VER-$LINUX_MACH ready."
 	)
 }
 
@@ -348,11 +398,12 @@ build_all_config()
 
 	# Test builds
 	echo "=============================="
-	echo "Testing all config $1"
+	echo "Testing all config $LINUX_BLD"
 	echo "=============================="
 	(
 		echo "Entering $LINUX_SRC"
 		cd $LINUX_SRC
+		log_init $1
 		make ARCH=$BUILD_ARCH ${1}config
 		build_kernel $1
 	)
@@ -371,6 +422,7 @@ build_def_config()
 	(
 		echo "Entering $LINUX_SRC"
 		cd $LINUX_SRC
+		log_init default
 		copy_configs
 		build_kernel default
 	)
@@ -389,6 +441,7 @@ build_cfg_config()
 	(
 		echo "Entering $LINUX_SRC"
 		cd $LINUX_SRC
+		log_init $1
 		copy_configs
 		apply_kconfig_file $SCRIPT/defconfig/$1
 		build_kernel $1
@@ -467,12 +520,16 @@ QUILTPATCH=
 CHECKER=0
 WARNING=0
 
-while getopts "b:c:dimno:p:q:r:svwy" opt
+while getopts "b:c:deikmno:p:q:r:svwy" opt
 do
 	case $opt in
+	d) BUILDDEFAULT="yes";;
 	y) BUILDALLYES="yes";;
 	n) BUILDALLNO="yes";;
 	m) BUILDALLMOD="yes";;
+	i) BUILDDEFAULT="yes"
+	   BUILDIMGS="yes";;
+	k) NOKERNELBUILD="yes";;
 	b) if [ -f $SCRIPT/defconfig/$OPTARG ]; then
 		BUILDCFGS="$BUILDCFGS $OPTARG"
 	   else
@@ -500,8 +557,7 @@ do
 		WARNING=`expr $WARNING + 1`
 	   fi;;
 	r) FORCEREBUILD=$OPTARG;;
-	d) DRYRUN="yes";;
-	i) BUILDIMGS="yes";;
+	e) DRYRUN="yes";;
 	v) if [ "x$VERBOSE" = "x" ]; then
 		VERBOSE=0
 	   elif [ $VERBOSE -lt 2 ]; then
@@ -547,10 +603,10 @@ for cfg in $BUILDCFGS; do
 		merge_patch $QUILTPATCH || exit 1
 	fi
 
-	build_def_config || exit 1
-
-	copy_images
-
+	if [ "x$BUILDDEFAULT" = "xyes" ]; then
+		build_def_config || exit 1
+		copy_images
+	fi
 	if [ "x$BUILDALLYES" = "xyes" ]; then
 		build_all_config allyes || exit 1
 	fi
