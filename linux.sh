@@ -156,6 +156,7 @@ copy_configs()
 			log "Copying $CUSTOM_DSDT"
 			if [ "x$DRYRUN" != "xyes" ]; then
 				cp -f $CUSTOM_DSDT $KERNELDSDT
+				apply_kconfig CONFIG_STANDALONE=n
 				apply_kconfig CONFIG_ACPI_CUSTOM_DSDT_FILE=\"acpi/dsdt.hex\"
 			fi
 		fi 
@@ -322,7 +323,7 @@ parse_kconfig()
 		if (match($0, /^CONFIG_/)) {					\
 			rem=substr($0, RLENGTH+1);				\
 			if (match(rem, /[A-Za-z0-9_]+=/)) {			\
-				cfg=substr(rem, 0, RLENGTH);			\
+				cfg=substr(rem, 0, RLENGTH-1);			\
 				val=substr(rem, RLENGTH+1);			\
 				if (match(val, /y/)) {				\
 					opt="--enable";		 		\
