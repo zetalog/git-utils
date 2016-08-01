@@ -29,7 +29,8 @@ usage()
 	echo "   linux-acpi:		Linux ACPI <linux-acpi@vger.kernel.org>"
 	echo "   acpica-devel:	ACPICA development <devel@acpica.org>"
 	echo "   acpica-both:		Both ACPICA development and Linux ACPI"
-	echo "   acpica-release:	ACPICA Linux release"
+	echo "   acpica-release:	qemu development <qemu-devel@nongnu.org>"
+	echo "   qemu-devel:	ACPICA Linux release"
 	echo ""
 	echo "  Internal patchsets:"
 	echo "   intel-diverg:	Intel ACPICA divergences reviewers"
@@ -77,6 +78,7 @@ if [ "x$1" = "xlv.zheng" ]; then
 	GSEFLAGS="$GSEFLAGS \
 --suppress-cc=all \
 --to=\"Lv Zheng <lv.zheng@intel.com>\" \
+--to=\"Yu Chen <yu.c.chen@intel.com>\" \
 "
 elif [ "x$1" = "xzetalog" ]; then
 	echo "Sending email to Lv \"ZETALOG\" Zheng"
@@ -122,6 +124,7 @@ else
 		GSELIST="linux-acpi"
 		GSEFLAGS="$GSEFLAGS \
 --to=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
+--to=\"Rafael J. Wysocki <rjw@rjwysocki.net>\" \
 --to=\"Len Brown <len.brown@intel.com>\" \
 --cc=\"linux-acpi@vger.kernel.org\" \
 "
@@ -131,6 +134,7 @@ else
 		GSELIST="acpica-release"
 		GSEFLAGS="$GSEFLAGS \
 --to=\"Rafael J. Wysocki <rafael.j.wysocki@intel.com>\" \
+--to=\"Rafael J. Wysocki <rjw@rjwysocki.net>\" \
 --to=\"Robert Moore <robert.moore@intel.com>\" \
 --to=\"Len Brown <len.brown@intel.com>\" \
 --to=\"Lv Zheng <lv.zheng@intel.com>\" \
@@ -190,6 +194,17 @@ else
 --to=\"Yu Chen <yu.c.chen@intel.com>\" \
 "
 		echo "Sending email to ACPICA divergences related"
+	elif [ "x$1" = "xqemu-devel" ]; then
+		GSELIST="qemu-devel"
+		GSEFLAGS="$GSEFLAGS \
+--to=\"Michael S. Tsirkin <mst@redhat.com>\" \
+--to=\"Igor Mammedov <imammedo@redhat.com>\" \
+--to=\"Shannon Zhao <shannon.zhao@linaro.org>\" \
+--cc=\"qemu-devel@nongnu.org\" \
+--cc=\"qemu-arm@nongnu.org\" \
+"
+		OUTGOING="yes"
+		echo "Sending email to ACPICA mailing list"
 	else
 		usage
 	fi

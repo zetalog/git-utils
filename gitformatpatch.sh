@@ -36,6 +36,7 @@ usage()
 	echo "  -d: dry run"
 	echo "  -n: specify number of patches to generate from HEAD"
 	echo "      default is 1"
+	echo "  -f: force msgid for v1 patchset"
 	echo "  -c: specify cover letter generation"
 	echo "  -p: specify prefix of patch file format"
 	echo "  -s: specify suffix of patch file format"
@@ -81,11 +82,12 @@ fatal()
 	usage
 }
 
-while getopts "cdn:op:s:r:m:t:" opt
+while getopts "cdfn:op:s:r:m:t:" opt
 do
 	case $opt in
 	c) COVER=true;;
 	d) DRYRUN="yes";;
+	f) FORCE_MSGID="yes";;
 	n) isnumber $OPTARG yes || fatal "Invalid number: $OPTARG isn't an integer >0."
 	   NUMBER=$OPTARG;;
 	o) GFPFLAGS="$GFPFLAGS -M -C";;
@@ -109,11 +111,13 @@ if [ $MAJOR -eq 0 -a $MINOR -eq 0 ]; then
 	fatal "Invalid major/minor: v${MAJOR}.${MINOR} is not allowed."
 fi
 require_msgid=yes
-if [ $MAJOR -eq 1 -a $MINOR -eq 0 ]; then
-	require_msgid=no
-fi
-if [ $MAJOR -eq 0 -a $MINOR -eq 1 ]; then
-	require_msgid=no
+if [ "x$FORCE_MSGID" = "x" ]; then
+	if [ $MAJOR -eq 1 -a $MINOR -eq 0 ]; then
+		require_msgid=no
+	fi
+	if [ $MAJOR -eq 0 -a $MINOR -eq 1 ]; then
+		require_msgid=no
+	fi
 fi
 if [ "x$1" = "x" ]; then
 	if [ "x$require_msgid" = "xyes" ]; then
