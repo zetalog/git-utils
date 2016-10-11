@@ -12,14 +12,14 @@
 # # LINUX_TOOLS=acpi   #
 # ######################
 # It should locate at (-b file):
-# $SCRIPT/defconfig/file
+# $HOME/defconfig/file
 # Then:
 # The kconfig file should locate at:
-# $SCRIPT/defconfig/linux-config-acpica-z530
+# $HOME/defconfig/linux-config-acpica-z530
 # The customized DSDT should locate at:
-# $SCRIPT/defconfig/dsdt.hex-z530
+# $HOME/defconfig/dsdt.hex-z530
 # The Linux kernel source should locate at:
-# $SCRIPT/workspace/linux-acpica
+# $HOME/workspace/linux-acpica
 # And, the following kernel tools will be built:
 # acpi
 #
@@ -28,7 +28,7 @@
 # # CONFIG_ACPI=n #
 # #################
 # It should locate at (-c file):
-# $SCRIPT/defconfig/file
+# $HOME/defconfig/file
 # This allows additional build test to be performed by disabling ACPI.
 #
 # Typical special object test file contents (extra targets):
@@ -38,7 +38,7 @@
 # # drivers/sfi/sfi_acpi.o             #
 # ######################################
 # It should locate at (-o file):
-# $SCRIPT/defconfig/file
+# $HOME/defconfig/file
 # This allows additional make targets to be performed.
 
 usage()
@@ -113,6 +113,14 @@ tlog()
 	tlog=`tlog_name`
 
 	echo $@ | tee -a $tlog
+}
+
+tlog_exit()
+{
+	tlog=`tlog_name`
+
+	echo $tlog
+	echo >> $tlog
 }
 
 load_objects()
@@ -323,7 +331,7 @@ parse_kconfig()
 		if (match($0, /^CONFIG_/)) {					\
 			rem=substr($0, RLENGTH+1);				\
 			if (match(rem, /[A-Za-z0-9_]+=/)) {			\
-				cfg=substr(rem, 0, RLENGTH-1);			\
+				cfg=substr(rem, 0, RLENGTH);			\
 				val=substr(rem, RLENGTH+1);			\
 				if (match(val, /y/)) {				\
 					opt="--enable";		 		\
@@ -444,7 +452,7 @@ build_cfg_config()
 		cd $LINUX_SRC
 		log_init $1
 		copy_configs
-		apply_kconfig_file $SCRIPT/defconfig/$1
+		apply_kconfig_file $CFGDIR/$1
 		build_kernel $1
 	)
 }
@@ -508,10 +516,14 @@ check_rebuild_arch()
 }
 
 SCRIPT=`(cd \`dirname $0\`; pwd)`
-FLASH=$SCRIPT/disk
-ROOTFS=$SCRIPT/rootfs
-INITRD=$SCRIPT/initrd
-STATUS=$SCRIPT/status
+HOME=`(cd ~; pwd)`
+
+CFGDIR=$HOME/defconfig
+FLASH=$HOME/disk
+ROOTFS=$HOME/rootfs
+INITRD=$HOME/initrd
+STATUS=$HOME/status
+
 SCFGTESTS=
 BUILDCFGS=
 SOBJTESTS=
@@ -531,20 +543,20 @@ do
 	i) BUILDDEFAULT="yes"
 	   BUILDIMGS="yes";;
 	k) NOKERNELBUILD="yes";;
-	b) if [ -f $SCRIPT/defconfig/$OPTARG ]; then
+	b) if [ -f $CFGDIR/$OPTARG ]; then
 		BUILDCFGS="$BUILDCFGS $OPTARG"
 	   else
 		"$OPTARG is not accessible."
 		usage
 	   fi;;
-	c) if [ -f $SCRIPT/defconfig/$OPTARG ]; then
+	c) if [ -f $CFGDIR/$OPTARG ]; then
 		SCFGTESTS="$SCFGTESTS $OPTARG"
 	   else
 		"$OPTARG is not accessible."
 		usage
 	   fi;;
-	o) if [ -f $SCRIPT/defconfig/$OPTARG ]; then
-		load_objects $SCRIPT/defconfig/$OPTARG
+	o) if [ -f $CFGDIR/$OPTARG ]; then
+		load_objects $CFGDIR/$OPTARG
 	   else
 		"$OPTARG is not accessible."
 		usage
@@ -588,12 +600,12 @@ fi
 echo $MAKEFLAGS
 
 for cfg in $BUILDCFGS; do
-	. $SCRIPT/defconfig/$cfg
+	. $CFGDIR/$cfg
 
 	check_rebuild_arch
-	CUSTOM_DSDT=$SCRIPT/defconfig/dsdt.hex-$LINUX_MACH
-	LINUX_SRC=$SCRIPT/workspace/linux-$LINUX_VER
-	LINUX_CFG=$SCRIPT/defconfig/linux-config-$LINUX_VER-$LINUX_MACH
+	CUSTOM_DSDT=$CFGDIR/dsdt.hex-$LINUX_MACH
+	LINUX_SRC=$HOME/workspace/linux-$LINUX_VER
+	LINUX_CFG=$CFGDIR/linux-config-$LINUX_VER-$LINUX_MACH
 	KERNELIMG=$LINUX_SRC/arch/$LINUX_ARCH/boot/bzImage
 	KERNELCFG=$LINUX_SRC/.config
 	KERNELDSDT=$LINUX_SRC/include/acpi/dsdt.hex
