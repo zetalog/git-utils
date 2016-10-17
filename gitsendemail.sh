@@ -78,7 +78,6 @@ if [ "x$1" = "xlv.zheng" ]; then
 	GSEFLAGS="$GSEFLAGS \
 --suppress-cc=all \
 --to=\"Lv Zheng <lv.zheng@intel.com>\" \
---to=\"Yu Chen <yu.c.chen@intel.com>\" \
 "
 elif [ "x$1" = "xzetalog" ]; then
 	echo "Sending email to Lv \"ZETALOG\" Zheng"
