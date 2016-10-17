@@ -101,14 +101,17 @@ merge_patch()
 {
 	repo=$1
 	name=$2
-	if [ ! -f $repo/patches/$name ]; then
+	if [ -f $repo/patches/$name ]; then
+		patch=patches/$name
+	elif [ -f $repo/$name ]; then
+		patch=$name
+	else
 		echo "No such patch: $name."
 		return 1
 	fi
 	(
 		cd $repo
-		patch=patches/$name
-		echo "Merging $name..."
+		echo "Merging $patch..."
 		if [ "x$DRYRUN" = "xyes" ]; then
 			echo git am $patch
 		else
