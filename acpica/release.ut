@@ -1,0 +1,12 @@
+#/bin/sh
+
+SCRIPT=`(cd \`dirname $0\`; pwd)`
+
+# Step 1: the tests to validate kconfigs
+#linuxrelease.sh -r no -v -b acpica-z530 -b acpica-sp3 -dyn -k -c cfg-clean-acpi -c cfg-clean-acpi-debug -c cfg-clean-acpi-debugger
+
+# Step 2: the full build tests
+linuxrelease.sh -r no -v -b acpica-z530 -b acpica-sp3 -dyn -c cfg-clean-acpi-debugger -c cfg-clean-acpi-debug -c cfg-clean-acpi
+
+#linuxrelease.sh -r no -v -b acpica-z530 -b acpica-sp3 -y
+#linuxrelease.sh -r no -v -b acpica-sp3 -d -s -s

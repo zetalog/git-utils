@@ -1,0 +1,12 @@
+#!/bin/sh
+
+case $1 in
+	*.intel.com|192.168.*|127.0.*|localhost|10.*)
+		METHOD="-X connect"
+	;;
+	*)
+		METHOD="-X 5 -x proxy-shz.intel.com:1080"
+	;;
+esac
+
+/bin/nc $METHOD $*

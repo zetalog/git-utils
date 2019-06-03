@@ -1,0 +1,17 @@
+
+1. Install netcat
+
+Type "apt-get install netcat-openbsd" as root to obtain compatible netcat.
+
+2. Configure /etc/environment
+
+The environment setting should be looked like the "environment" file.
+
+3. Configure /etc/sudoers
+
+Type "visudo" as root, add "env_keep" for proxy environemnts, please refer to the "sudoers" file.
+
+4. Install socks-wrapper script
+
+The script should be looked like the "socks-wrapper" file.
+

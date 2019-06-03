@@ -24,6 +24,7 @@ usage()
 	echo "   acpi-review:		Intel Linux ACPI team"
 	echo "   acpica-review:	Intel Linux ACPICA team"
 	echo "   intel-acpi:		Intel Linux ACPI <acpi@linux.intel.com>"
+	echo "   lkp:			LKP Developers <lkp-developer@eclists.intel.com>"
 	echo ""
 	echo "  External recipients:"
 	echo "   linux-acpi:		Linux ACPI <linux-acpi@vger.kernel.org>"
@@ -175,6 +176,13 @@ else
 --to=\"linux-power-mgmt@linux.intel.com\" \
 "
 		echo "Sending email to Intel ACPI community"
+	elif [ "x$1" = "xlkp" ]; then
+		GSELIST="lkp"
+		GSEFLAGS="$GSEFLAGS \
+--to=\"Philip Li <philip.li@intel.com>\" \
+--cc=\"lkp-developer@eclists.intel.com\" \
+"
+		echo "Sending email to LKP developers"
 	elif [ "x$1" = "xpatchwork" ]; then
 		GSEFLAGS="$GSEFLAGS \
 --to=\"Ying Huang <ying.huang@intel.com>\" \

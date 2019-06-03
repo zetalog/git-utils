@@ -1,0 +1,5 @@
+export GIT_PROXY_COMMAND=/usr/local/bin/socks-wrapper
+export http_proxy=http://proxy-shz.intel.com:911
+export https_proxy=http://proxy-shz.intel.com:911
+export ftp_proxy=http://proxy-shz.intel.com:911
+export no_proxy=intel.com,.intel.com,10.0.0.0/8,192.168.0.0/16,localhost,127.0.0.0/8,134,134.0.0/16

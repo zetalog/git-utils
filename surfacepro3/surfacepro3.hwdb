@@ -1,0 +1,3 @@
+libinput:name:*Lid Switch*:dmi:*svnMicrosoftCorporation:pnSurfacePro3:*
+  LIBINPUT_ATTR_LID_SWITCH_RELIABILITY=write_open
+  ID_INPUT_SWITCH=1
