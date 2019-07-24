@@ -39,15 +39,18 @@ branch=$1
 shift 1
 
 # Sync upstream, note we need a clean base here
-git fetch zetalog
+git checkout -b tmp
+git fetch $upstream
 git branch -D $branch
-git branch $branch zetalog/master
+git branch $branch ${upstream}/master
 git checkout $branch
+git branch -D tmp
 if [ "x${base_next}" = "xyes" ]; then
-	git merge zetalog/gem5-next
+	git merge ${upstream}/gem5-next
 fi
 
 # Merge patchset
-for patch in "$@" do
+for patch in "$@"
+do
 	git am $patch
 done
